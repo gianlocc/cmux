@@ -20,6 +20,7 @@ enum SleepyPalette {
                 "H": logo.sleepyLightened(0.30),
                 "C": logo,
                 "c": logo.sleepyDarkened(0.30),
+                "E": Self.exaBlue,
                 "Y": Color(red: 1.0, green: 0.93, blue: 0.70),
             ]
         case .cmux:
@@ -53,6 +54,13 @@ enum SleepyPalette {
         }
     }
 
+    /// Exa brand blue (#1F40ED), sampled from the official mark.
+    ///
+    /// Deliberately identical in every theme, including `custom` and `mono`: a
+    /// brand mark rendered in someone else's palette is no longer the mark. It
+    /// is the one palette entry themes do not get to move.
+    static let exaBlue = Color(red: 0.122, green: 0.251, blue: 0.929)
+
     /// Shared accents (blush, pom-pom, moon, and the always-cyan cmux logo).
     private static func base(face: Color, faceShade: Color, cap: Color, capShade: Color) -> [Character: Color] {
         [
@@ -65,6 +73,7 @@ enum SleepyPalette {
             "H": Color(red: 0.74, green: 0.96, blue: 1.0),   // cmux logo highlight
             "C": Color(red: 0.42, green: 0.87, blue: 1.0),
             "c": Color(red: 0.16, green: 0.52, blue: 0.93),
+            "E": exaBlue,
             "Y": Color(red: 1.0, green: 0.93, blue: 0.70),
         ]
     }

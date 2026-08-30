@@ -433174,6 +433174,23 @@
         }
       }
     },
+    "sleepyMode.button.cancelUnlock": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
+          }
+        }
+      }
+    },
     "sleepyMode.button.energy": {
       "extractionState": "manual",
       "localizations": {
@@ -434759,23 +434776,6 @@
         }
       }
     },
-    "sleepyMode.mascot.bunny": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bunny"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "うさぎ"
-          }
-        }
-      }
-    },
     "sleepyMode.mascot.cat": {
       "extractionState": "manual",
       "localizations": {
@@ -434953,6 +434953,23 @@
         }
       }
     },
+    "sleepyMode.mascot.exa": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exa logo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exa ロゴ"
+          }
+        }
+      }
+    },
     "sleepyMode.mascot.logoFace": {
       "extractionState": "manual",
       "localizations": {
@@ -435126,6 +435143,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "배경 글로우"
+          }
+        }
+      }
+    },
+    "sleepyMode.settings.logo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmux logo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmux ロゴ"
           }
         }
       }

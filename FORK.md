@@ -28,23 +28,34 @@ push. Use the `--force-with-lease` line the script prints rather than a bare
 
 ## What this fork changes
 
-Two features, both inside Sleepy Mode.
+Two features, both inside Sleepy Mode, plus one carried upstream fix.
 
-### 1. Bunny mascot
+### 1. Exa logo mascot
 
-A fourth grid mascot alongside cmux / cat / ghost, selectable in
-**Settings → Sleepy Mode → Mascot**. Tall ears with a blush-colored inner
-lining, drawn in whatever theme palette is active.
+A fourth mascot alongside cmux / cat / ghost, selectable in
+**Settings → Sleepy Mode → Mascot**, plus a **cmux logo** scene toggle for the
+chevron that normally sits under the mascot.
 
-- `Packages/.../SleepyMode/SleepyMascot.swift` — the `bunny` case.
-- `Sources/SleepyArt.swift` — `bunnyMascot`, the 16×16 sprite.
-- `Packages/.../Sections/SleepyModeSection.swift` — the picker row.
-- `cmuxTests/SleepyMascotArtTests.swift` — sprite invariants.
+- `Packages/.../SleepyMode/SleepyMascot.swift` — the `exa` case and
+  `wearsSharedFace`.
+- `Sources/SleepyArt.swift` — `exaMascot`, the 16×16 sprite.
+- `Sources/SleepyPalette.swift` — the `"E"` brand-blue palette entry.
+- `Packages/.../Sections/SleepyModeSection.swift` — picker row and logo toggle.
+- `cmuxTests/SleepyMascotArtTests.swift` — sprite and palette invariants.
 
-The grid mascots share one set of face anchors (`openEyes` / `closedEyes` /
-`mouthTop` / `mouthOpen`), drawn on top of the sprite. A new mascot's head has
-to cover those anchors or the eyes and mouth float in empty space — that is what
-`SleepyMascotArtTests` pins down.
+The sprite was rasterized from the official asset (crop to the mark's bounding
+box, downsample to 16×16, threshold) rather than drawn by eye. Regenerate it the
+same way if the mark ever changes.
+
+Two things worth knowing before editing it:
+
+- **The mark keeps Exa blue (#1F40ED) in every theme**, `mono` and `custom`
+  included. `"E"` is the one palette entry themes do not move — a brand mark in
+  someone else's colors is no longer the mark.
+- **It opts out of the shared face.** The grid mascots get blinking eyes, blush
+  and a mouth painted on top at fixed anchors chosen for a round head; on line
+  art those land on the strokes and read as noise. `wearsSharedFace` gates both
+  the face and the stacked cmux chevron.
 
 ### 2. Touch ID / password gate on leaving Sleepy Mode
 
@@ -68,6 +79,35 @@ mechanism and drops the claim — the settings copy and the code comments say
 plainly what it does and does not stop. For real security the scene's
 **Lock Mac** button still engages the actual macOS login lock.
 
+#### Why the gate is cancellable
+
+The first version latched. `isPrompting` gates "one prompt at a time", and the
+prompt is dismissed by the macOS login lock without `evaluatePolicy` resolving —
+so the flag stayed set, and every subsequent key, click and Exit press was
+swallowed. Permanent lockout, stuck on "Waiting for Touch ID".
+
+Three things keep that from recurring, and none should be removed casually:
+
+- `SleepyUnlockAuthenticator` retains its `LAContext` so `cancel()` can
+  `invalidate()` it, which forces the pending `evaluatePolicy` to throw. The
+  `await` always resumes.
+- The scene's Exit button becomes **Cancel** while prompting and dismisses the
+  prompt, so the UI can always break out of a panel the user cannot see.
+- A `com.apple.screenIsLocked` observer clears the prompt state, covering every
+  lock route (the Lock Mac button, hot corner, Ctrl-Cmd-Q, the lid).
+
+An unlock attempt also carries a generation number, so a cancelled attempt
+resuming late cannot clobber the state of the attempt that replaced it.
+
+The overlay additionally drops from `.screenSaver` to `.normal` while a prompt is
+up. The LocalAuthentication panel is presented far below `.screenSaver`, so a
+full-screen overlay at that level hides it completely — the prompt is up and
+waiting, but invisible, and the scene just looks frozen.
+
+`lockMac()` stands the gate down before engaging the real login lock: that lock is
+strictly stronger, and leaving a gated overlay behind it means unlocking the Mac
+drops you straight back into a Touch ID prompt for the screensaver.
+
 #### Escape hatch
 
 `deactivate()` is deliberately left ungated, and the debug socket calls it
@@ -75,13 +115,58 @@ directly. If the authentication prompt ever fails to appear, this gets you out
 without a reboot:
 
 ```bash
-CMUX_TAG=<tag> scripts/cmux-debug-cli.sh sleepy_mode off
+printf 'sleepy_mode off\n' | nc -U /tmp/cmux-debug-<tag>.sock
 ```
+
+Note this goes at the socket directly. `scripts/cmux-debug-cli.sh sleepy_mode off`
+does *not* work: `sleepy_mode` is handled by the app's socket dispatcher but was
+never added to the CLI, which rejects unknown commands client-side before they
+reach the socket.
 
 `SleepyUnlockDecision` also fails *open* when macOS reports that no prompt can be
 shown at all (`.passcodeNotSet`, `.notInteractive`, `.invalidContext`) — a gate
 that can strand you behind a full-screen overlay is worse than one that yields
 when it cannot ask.
+
+### Carried upstream fix
+
+`Sources/App/AgentHibernationController.swift` declared
+
+```swift
+let processLiveness: RestorableAgentProcessLiveness = .unknown
+```
+
+A `let` with an initial value is omitted from Swift's synthesized memberwise
+initializer, so the type's only construction site -- which passes
+`processLiveness:` -- could not compile. Changing it to a `var` with the same
+default puts it back in the initializer as a *defaulted* parameter: the call site's
+computed value is used again (restoring the intent of #10658, which the `let`
+silently pinned to `.unknown`), while the hibernation tests that omit the
+argument still compile.
+
+Do not "tidy" this back to `let`. A bare `let` breaks the call site; a `let` with
+a default breaks it differently. The `var` is load-bearing.
+
+Not part of either feature. Drop this commit once upstream lands its own fix; if
+`fork-sync.sh` reports a conflict there, take upstream's side.
+
+### Known: `cmuxTests` does not compile on Xcode 26.6
+
+Unrelated to this fork, and not worked around here. Upstream's test target hits a
+systemic swift-testing problem on Xcode 26.6 -- `#expect` / `#require` macro
+expansions rejected with "call can throw, but it is not marked with 'try'" --
+across several test files (`FileDropOverlayViewTests`,
+`KeyboardShortcutContextSwiftTests`, and probably more). Swift aborts sibling
+compile batches, so each clean build surfaces exactly one more file; there is no
+cheap way to see the full list. Upstream CI selects its own Xcode 26.x and does
+not appear to hit it.
+
+Consequence: `cmuxTests/SleepyMascotArtTests` and `cmuxTests/SleepyUnlockGateTests`
+are wired correctly but cannot be run locally on this toolchain. The
+`CmuxSettingsUI` package tests do run (`swift test`), and cover the settings model.
+
+Hoisting the macro argument into a local (`let e = f(); try #require(e)`) fixes
+each site, if it ever becomes worth chasing.
 
 ## Conflict-prone files on rebase
 

@@ -12,6 +12,7 @@ struct SleepyModeDefaultsKeys {
     static let showClock = "sleepyMode.showClock"
     static let showStatus = "sleepyMode.showStatus"
     static let showPets = "sleepyMode.showPets"
+    static let showLogo = "sleepyMode.showLogo"
     static let requireAuth = "sleepyMode.requireAuth"
     static let customFace = "sleepyMode.customFace"
     static let customCap = "sleepyMode.customCap"

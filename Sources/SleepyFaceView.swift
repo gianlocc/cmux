@@ -169,17 +169,31 @@ struct SleepyFaceView: View {
             Spacer()
             HStack(spacing: 16) {
                 Button {
-                    SleepyModeController.shared.requestExit()
+                    // While a prompt is up, Exit dismisses *the prompt* rather
+                    // than being swallowed by the one-at-a-time guard. That is
+                    // the user-facing way out of a panel they cannot see.
+                    let controller = SleepyModeController.shared
+                    if controller.lockUIState.isPrompting {
+                        controller.cancelUnlockPrompt()
+                    } else {
+                        controller.requestExit()
+                    }
                 } label: {
-                    Label(String(localized: "sleepyMode.button.exit", defaultValue: "Exit"), systemImage: "xmark")
+                    Label(
+                        lockUIState.isPrompting
+                            ? String(localized: "sleepyMode.button.cancelUnlock", defaultValue: "Cancel")
+                            : String(localized: "sleepyMode.button.exit", defaultValue: "Exit"),
+                        systemImage: lockUIState.isPrompting ? "xmark.circle" : "xmark"
+                    )
                 }
                 .buttonStyle(SleepyPixelButtonStyle(tint: Color(red: 0.52, green: 0.30, blue: 0.40)))
 
                 Button {
                     // The real macOS login lock — genuinely secure (Apple's), unlike
-                    // the overlay. The screensaver stays up behind it as the backdrop.
-                    let power = power
-                    Task { await power.lockMacNow() }
+                    // the overlay. Routed through the controller so an armed gate
+                    // stands down first; otherwise unlocking the Mac lands you back
+                    // on a locked scene demanding Touch ID again.
+                    SleepyModeController.shared.lockMac()
                 } label: {
                     Label(String(localized: "sleepyMode.button.lockMac", defaultValue: "Lock Mac"), systemImage: "lock.fill")
                 }
@@ -275,8 +289,14 @@ struct SleepyFaceView: View {
                 y: (center.y - CGFloat(rows.count) / 2 * pixel + bob).rounded()
             )
             drawSprite(in: &ctx, rows: rows, palette: palette, origin: origin, pixel: pixel)
-            drawFace(in: &ctx, origin: origin, pixel: pixel, breath: breath, time: t, ink: ink, forceOpen: eyesForceOpen)
-            drawCmuxLogo(in: &ctx, center: center, mascotRows: rows.count, pixel: pixel, time: t, palette: palette)
+            if config.mascot.wearsSharedFace {
+                drawFace(in: &ctx, origin: origin, pixel: pixel, breath: breath, time: t, ink: ink, forceOpen: eyesForceOpen)
+                // A logo mascot is already a logo; stacking the cmux chevron
+                // under it just reads as two marks fighting.
+                if config.showLogo {
+                    drawCmuxLogo(in: &ctx, center: center, mascotRows: rows.count, pixel: pixel, time: t, palette: palette)
+                }
+            }
         }
 
         if let p = heartProgress {

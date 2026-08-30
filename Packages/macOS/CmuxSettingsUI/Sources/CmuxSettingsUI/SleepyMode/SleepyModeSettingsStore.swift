@@ -35,6 +35,8 @@ public final class SleepyModeSettingsStore {
     public var showStatus: Bool { didSet { persist(showStatus, SleepyModeDefaultsKeys.showStatus) } }
     /// Whether one walking pet per running agent is drawn.
     public var showPets: Bool { didSet { persist(showPets, SleepyModeDefaultsKeys.showPets) } }
+    /// Whether the cmux chevron logo is drawn under the mascot.
+    public var showLogo: Bool { didSet { persist(showLogo, SleepyModeDefaultsKeys.showLogo) } }
     /// Whether leaving Sleepy Mode requires Touch ID or the account password.
     public var requireAuth: Bool { didSet { persist(requireAuth, SleepyModeDefaultsKeys.requireAuth) } }
 
@@ -67,6 +69,7 @@ public final class SleepyModeSettingsStore {
         showClock = defaults.object(forKey: SleepyModeDefaultsKeys.showClock) as? Bool ?? fallback.showClock
         showStatus = defaults.object(forKey: SleepyModeDefaultsKeys.showStatus) as? Bool ?? fallback.showStatus
         showPets = defaults.object(forKey: SleepyModeDefaultsKeys.showPets) as? Bool ?? fallback.showPets
+        showLogo = defaults.object(forKey: SleepyModeDefaultsKeys.showLogo) as? Bool ?? fallback.showLogo
         requireAuth = defaults.object(forKey: SleepyModeDefaultsKeys.requireAuth) as? Bool ?? fallback.requireAuth
         customFace = defaults.string(forKey: SleepyModeDefaultsKeys.customFace) ?? fallback.customFace
         customCap = defaults.string(forKey: SleepyModeDefaultsKeys.customCap) ?? fallback.customCap
@@ -88,6 +91,7 @@ public final class SleepyModeSettingsStore {
         config.showClock = showClock
         config.showStatus = showStatus
         config.showPets = showPets
+        config.showLogo = showLogo
         config.requireAuth = requireAuth
         config.customFace = customFace
         config.customCap = customCap

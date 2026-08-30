@@ -63,6 +63,12 @@ final class SleepyModeController {
 
     private var overlayWindows: [SleepyOverlayWindow] = []
     private var screenObserver: NSObjectProtocol?
+    private var screenLockObserver: NSObjectProtocol?
+
+    /// Bumped for every unlock attempt. A resolved attempt only writes UI state
+    /// if it is still the current one, so a cancelled prompt's late resumption
+    /// cannot clobber the state of the prompt that replaced it.
+    private var unlockGeneration: UInt64 = 0
 
     private var systemAssertionID = IOPMAssertionID(0)
     private var displayAssertionID = IOPMAssertionID(0)
@@ -95,6 +101,7 @@ final class SleepyModeController {
         lockUIState.wasDenied = false
         beginPowerAssertions()
         installScreenObserver()
+        installScreenLockObserver()
         rebuildOverlayWindows()
         NSApp.unhide(nil)
         NSRunningApplication.current.activate(options: [.activateAllWindows])
@@ -126,13 +133,20 @@ final class SleepyModeController {
         // One prompt at a time: there is one overlay per display, and a
         // held-down key repeats its `keyDown`.
         guard !lockUIState.isPrompting else { return }
+        unlockGeneration &+= 1
+        let generation = unlockGeneration
         lockUIState.isPrompting = true
         lockUIState.wasDenied = false
+        setOverlayLevel(Self.promptWindowLevel)
         let authenticator = unlockAuthenticator
         let reason = String(localized: "sleepyMode.unlockReason", defaultValue: "Unlock cmux Sleepy Mode")
         Task { [self] in
             let outcome = await authenticator.authenticate(reason: reason)
+            // A cancelled or superseded attempt must not write state belonging
+            // to the attempt that replaced it.
+            guard generation == unlockGeneration else { return }
             lockUIState.isPrompting = false
+            setOverlayLevel(.screenSaver)
             if outcome == .unavailable {
                 cmuxDebugLog("sleepyMode.unlock unavailable — exiting without authentication")
             }
@@ -145,12 +159,59 @@ final class SleepyModeController {
         }
     }
 
+    /// Dismisses a prompt that is currently up and returns to the locked scene.
+    ///
+    /// This is the gate's release valve. The overlay swallows input while a
+    /// prompt is up, so anything that leaves `isPrompting` set forever locks the
+    /// user out for good — which is what happens when the macOS login lock tears
+    /// the panel away mid-evaluation. The scene's Exit button routes here while
+    /// prompting, and the screen-lock observer calls it too, so the state can
+    /// always be cleared even if `evaluatePolicy` never resumes on its own.
+    func cancelUnlockPrompt() {
+        guard lockUIState.isPrompting else { return }
+        unlockGeneration &+= 1
+        unlockAuthenticator.cancel()
+        lockUIState.isPrompting = false
+        lockUIState.wasDenied = true
+        setOverlayLevel(.screenSaver)
+    }
+
+    /// Engages the real macOS login lock.
+    ///
+    /// When the gate is armed Sleepy Mode steps aside first: the login lock is
+    /// strictly stronger, and leaving a gated overlay up behind it means
+    /// unlocking the Mac drops you straight back into a Touch ID prompt for the
+    /// screensaver. Ungated, the scene stays up as the backdrop, which is the
+    /// upstream behavior.
+    func lockMac() {
+        cancelUnlockPrompt()
+        let power = powerControls
+        if store.requireAuth { deactivate() }
+        Task { await power.lockMacNow() }
+    }
+
+    /// The LocalAuthentication panel is presented far below `.screenSaver`, so a
+    /// full-screen overlay at that level hides it completely: the prompt is up
+    /// and waiting, but invisible, and the scene just looks frozen. Drop to a
+    /// normal level while prompting — the overlay is still full-screen and
+    /// frontmost, so the desktop stays covered — and restore afterwards.
+    private static let promptWindowLevel: NSWindow.Level = .normal
+
+    private func setOverlayLevel(_ level: NSWindow.Level) {
+        for window in overlayWindows {
+            window.level = level
+        }
+    }
+
     func deactivate() {
         guard isActive else { return }
         isActive = false
+        unlockGeneration &+= 1
+        unlockAuthenticator.cancel()
         lockUIState.isPrompting = false
         lockUIState.wasDenied = false
         removeScreenObserver()
+        removeScreenLockObserver()
         endPowerAssertions()
         tearDownOverlayWindows()
         onStateChange?()
@@ -212,6 +273,31 @@ final class SleepyModeController {
                 guard let self, self.isActive else { return }
                 self.rebuildOverlayWindows()
             }
+        }
+    }
+
+    /// The Mac locking by any route — our own Lock Mac button, a hot corner,
+    /// Ctrl-Cmd-Q, the lid closing — takes the authentication panel down without
+    /// necessarily resolving `evaluatePolicy`. Clear the prompt state so the
+    /// scene is usable again on return instead of latched on "Waiting for
+    /// Touch ID".
+    private func installScreenLockObserver() {
+        guard screenLockObserver == nil else { return }
+        screenLockObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.screenIsLocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.cancelUnlockPrompt()
+            }
+        }
+    }
+
+    private func removeScreenLockObserver() {
+        if let screenLockObserver {
+            DistributedNotificationCenter.default().removeObserver(screenLockObserver)
+            self.screenLockObserver = nil
         }
     }
 

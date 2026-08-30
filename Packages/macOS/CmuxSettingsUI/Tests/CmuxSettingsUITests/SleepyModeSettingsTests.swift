@@ -35,14 +35,35 @@ struct SleepyModeSettingsTests {
 
     /// Raw values are the persisted representation; renaming one silently resets
     /// everybody's saved mascot to the default.
-    @Test func bunnyMascotPersistsUnderAStableRawValue() {
-        #expect(SleepyMascot.bunny.rawValue == "bunny")
-        #expect(SleepyMascot(rawValue: "bunny") == .bunny)
-        #expect(SleepyMascot.allCases.contains(.bunny))
+    @Test func exaMascotPersistsUnderAStableRawValue() {
+        #expect(SleepyMascot.exa.rawValue == "exa")
+        #expect(SleepyMascot(rawValue: "exa") == .exa)
+        #expect(SleepyMascot.allCases.contains(.exa))
 
         let defaults = isolatedDefaults()
-        SleepyModeSettingsStore(defaults: defaults).mascot = .bunny
-        #expect(SleepyModeSettingsStore(defaults: defaults).mascot == .bunny)
+        SleepyModeSettingsStore(defaults: defaults).mascot = .exa
+        #expect(SleepyModeSettingsStore(defaults: defaults).mascot == .exa)
+    }
+
+    /// The cmux chevron has always been drawn; anyone upgrading keeps it unless
+    /// they turn it off themselves.
+    @Test func cmuxLogoStaysOnByDefaultAndPersists() {
+        #expect(SleepyModeConfig().showLogo)
+
+        let defaults = isolatedDefaults()
+        #expect(SleepyModeSettingsStore(defaults: defaults).showLogo)
+        SleepyModeSettingsStore(defaults: defaults).showLogo = false
+
+        let reloaded = SleepyModeSettingsStore(defaults: defaults)
+        #expect(reloaded.showLogo == false)
+        #expect(reloaded.snapshot().showLogo == false)
+    }
+
+    /// Every persisted key is a migration surface: renaming one silently resets
+    /// that preference for everybody who already set it.
+    @Test func persistedKeysAreStable() {
+        #expect(SleepyModeDefaultsKeys.requireAuth == "sleepyMode.requireAuth")
+        #expect(SleepyModeDefaultsKeys.showLogo == "sleepyMode.showLogo")
     }
 
     private func isolatedDefaults() -> UserDefaults {

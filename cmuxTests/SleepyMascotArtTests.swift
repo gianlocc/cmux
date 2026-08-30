@@ -28,10 +28,12 @@ struct SleepyMascotArtTests {
         }
     }
 
-    @Test("Every grid mascot has face under the shared eye and mouth anchors", arguments: SleepyMascot.allCases)
+    /// Only mascots that wear the shared face need head under the anchors. A
+    /// logo mark opts out precisely because it has holes there.
+    @Test("Face-wearing mascots have head under every shared anchor", arguments: SleepyMascot.allCases)
     func faceAnchorsLandOnTheHead(mascot: SleepyMascot) {
         let rows = SleepyArt.mascotRows(mascot)
-        guard !rows.isEmpty else { return }
+        guard !rows.isEmpty, mascot.wearsSharedFace else { return }
         let anchors = SleepyArt.openEyes + SleepyArt.closedEyes + SleepyArt.mouthTop + SleepyArt.mouthOpen
         for (col, row) in anchors {
             #expect(
@@ -41,29 +43,66 @@ struct SleepyMascotArtTests {
         }
     }
 
-    @Test("The bunny carries the shared blush pixels")
-    func bunnyHasBlush() {
-        let rows = SleepyArt.mascotRows(.bunny)
-        for col in [3, 4, 11, 12] {
-            #expect(Self.pixel(rows, col: col, row: 8) == "B", "bunny is missing blush at column \(col)")
+    /// Painting blinking eyes and a mouth onto line art reads as noise, so the
+    /// logo marks must stay opted out. This is the invariant that keeps the
+    /// renderer's `wearsSharedFace` branch honest.
+    @Test("Logo mascots opt out of the shared face")
+    func logoMascotsHaveNoFace() {
+        #expect(SleepyMascot.exa.wearsSharedFace == false)
+        #expect(SleepyMascot.logoFace.wearsSharedFace == false)
+        #expect(SleepyMascot.cmux.wearsSharedFace)
+        #expect(SleepyMascot.cat.wearsSharedFace)
+        #expect(SleepyMascot.ghost.wearsSharedFace)
+    }
+
+    /// Rasterized from the official asset, so the distinguishing features are
+    /// the full-height left spine, the full-width top and bottom bars, and the
+    /// hourglass pinch where the diagonals meet.
+    @Test("The Exa mark keeps its spine, bars and hourglass pinch")
+    func exaMarkGeometry() {
+        let rows = SleepyArt.mascotRows(.exa)
+        for row in 0..<16 {
+            #expect(Self.pixel(rows, col: 0, row: row) == "E", "Exa spine broken at row \(row)")
+        }
+        for col in 0..<16 {
+            #expect(Self.pixel(rows, col: col, row: 0) == "E", "Exa top bar broken at column \(col)")
+            #expect(Self.pixel(rows, col: col, row: 15) == "E", "Exa bottom bar broken at column \(col)")
+        }
+        // The waist: the mid bar runs left, and the right half is open there.
+        #expect(Self.pixel(rows, col: 9, row: 7) == "E")
+        #expect(Self.pixel(rows, col: 12, row: 7) == ".")
+        // Counter-space inside the upper triangle stays open.
+        #expect(Self.pixel(rows, col: 8, row: 2) == ".")
+    }
+
+    /// Every mascot is drawn from the theme palette; a stray character would
+    /// silently render as nothing.
+    @Test("Sprites only use known palette characters", arguments: SleepyMascot.allCases)
+    func spritesUseKnownPaletteCharacters(mascot: SleepyMascot) {
+        let known = Set("OoPpWBHCcEY.")
+        for (index, row) in SleepyArt.mascotRows(mascot).enumerated() {
+            for character in row where !known.contains(character) {
+                Issue.record("\(mascot.rawValue) row \(index) uses unknown palette character '\(character)'")
+            }
         }
     }
 
-    /// The ears are the whole point of the sprite: they have to sit above the
-    /// face band rather than overlap the eye rows.
-    @Test("The bunny's ears rise above the face band")
-    func bunnyEarsClearTheFace() {
-        let rows = SleepyArt.mascotRows(.bunny)
-        // Row 0 is the solid ear tip; the blush lining runs from row 1 down.
-        #expect(Self.pixel(rows, col: 5, row: 0) == "O")
-        #expect(Self.pixel(rows, col: 10, row: 0) == "O")
-        for row in 1...3 {
-            #expect(Self.pixel(rows, col: 5, row: row) == "B", "bunny ear lining missing at row \(row)")
-            #expect(Self.pixel(rows, col: 10, row: row) == "B", "bunny ear lining missing at row \(row)")
-        }
-        // The gap between the ears must stay transparent, or they read as one block.
-        for row in 0...3 {
-            #expect(Self.pixel(rows, col: 7, row: row) == ".", "bunny ears are fused at row \(row)")
+    /// Every character a sprite uses has to exist in every theme's palette, or
+    /// those pixels silently render as nothing.
+    @Test("Every theme resolves every character the sprites use", arguments: SleepyTheme.allCases)
+    func paletteCoversEverySpriteCharacter(theme: SleepyTheme) {
+        var config = SleepyModeConfig()
+        config.theme = theme
+        let palette = SleepyPalette.colors(for: config)
+        for mascot in SleepyMascot.allCases {
+            for row in SleepyArt.mascotRows(mascot) {
+                for character in row where character != "." {
+                    #expect(
+                        palette[character] != nil,
+                        "theme \(theme.rawValue) has no color for '\(character)' used by \(mascot.rawValue)"
+                    )
+                }
+            }
         }
     }
 

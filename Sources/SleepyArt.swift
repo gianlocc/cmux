@@ -4,7 +4,7 @@ import Foundation
 // MARK: - Pixel art assets
 
 enum SleepyArt {
-    /// Shared face anchors for the grid mascots (cmux/cat/ghost/bunny).
+    /// Shared face anchors for the grid mascots (cmux/cat/ghost).
     static let closedEyes: [(Int, Int)] = [(4, 7), (7, 7), (5, 8), (6, 8), (8, 7), (11, 7), (9, 8), (10, 8)]
     static let openEyes: [(Int, Int)] = [(5, 7), (6, 7), (5, 8), (6, 8), (9, 7), (10, 7), (9, 8), (10, 8)]
     static let mouthTop: [(Int, Int)] = [(7, 10), (8, 10)]
@@ -15,7 +15,7 @@ enum SleepyArt {
         case .cmux: return cmuxMascot
         case .cat: return catMascot
         case .ghost: return ghostMascot
-        case .bunny: return bunnyMascot
+        case .exa: return exaMascot
         case .logoFace: return []
         }
     }
@@ -60,26 +60,30 @@ enum SleepyArt {
         "................",
     ]
 
-    /// Bunny: tall ears with a blush-colored inner lining over a round head
-    /// (16x16). Ears sit above the shared face band, so the eyes/blush/mouth
-    /// anchors in `openEyes` / `closedEyes` / `mouthTop` land unchanged.
-    static let bunnyMascot: [String] = [
-        "....OOO..OOO....",
-        "....OBO..OBO....",
-        "....OBO..OBO....",
-        "....OBO..OBO....",
-        "...OOOOOOOOOO...",
-        "..OOOOOOOOOOOO..",
-        "..OOOOOOOOOOOO..",
-        "..OOOOOOOOOOOO..",
-        "..OBBOOOOOOBBO..",
-        "..OOOOOOOOOOOO..",
-        "..OOOOOOOOOOOO..",
-        "..OOOOOOOOOOOO..",
-        "..oOOOOOOOOOOo..",
-        "...oOOOOOOOOo...",
-        "....oOOOOOOo....",
-        "................",
+    /// The Exa "E/X" monogram (16x16), rasterized from the official asset
+    /// rather than eyeballed. Flat `E` strokes: the mark has no bevel, and `E`
+    /// is Exa brand blue, which every theme leaves alone.
+    ///
+    /// Line art, not a head. It opts out of the shared face anchors via
+    /// `SleepyMascot.wearsSharedFace`, because eyes and a mouth land on the
+    /// strokes and read as noise.
+    static let exaMascot: [String] = [
+        "EEEEEEEEEEEEEEEE",
+        "EEEEEEEEEEEEEEEE",
+        "EEEE........EEE.",
+        "EEEEE......EEE..",
+        "EE..EE....EEE...",
+        "EE...EE..EEE....",
+        "EE....EEEEE.....",
+        "EEEEEEEEEE......",
+        "EEEEEEEEEE......",
+        "EE....EEEEE.....",
+        "EE...EE..EEE....",
+        "EE..EE....EEE...",
+        "EEEEE......EEE..",
+        "EEEE........EEE.",
+        "EEEEEEEEEEEEEEEE",
+        "EEEEEEEEEEEEEEEE",
     ]
 
     /// Ghost: domed top, wavy feet (16x16).

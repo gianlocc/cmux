@@ -21,6 +21,8 @@ public struct SleepyModeConfig: Equatable, Sendable {
     public var showStatus = true
     /// Whether one walking pet per running agent is drawn.
     public var showPets = true
+    /// Whether the cmux chevron logo is drawn under the mascot.
+    public var showLogo = true
     /// Whether leaving Sleepy Mode requires Touch ID or the account password.
     public var requireAuth = false
 
