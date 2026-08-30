@@ -1,6 +1,7 @@
 import AppKit
 import CmuxSettingsUI
 import IOKit.pwr_mgt
+import OSLog
 import SwiftUI
 
 /// Owns "Sleepy Mode": a cute full-screen keep-awake screensaver. It holds
@@ -55,6 +56,11 @@ final class SleepyModeController {
     /// Shared unlock UI state, so every per-display overlay shows one lock hint
     /// and overlapping wake attempts coalesce into a single prompt.
     let lockUIState = SleepyLockUIState()
+
+    /// The debug-only log helper is compiled out of Release builds, and a gate
+    /// that yields without authenticating is precisely the event worth having a
+    /// record of in a shipping build. os.Logger is the Release-safe facility.
+    private static let log = Logger(subsystem: "com.cmuxterm.app", category: "SleepyMode")
 
     private(set) var isActive = false
 
@@ -148,7 +154,7 @@ final class SleepyModeController {
             lockUIState.isPrompting = false
             setOverlayLevel(.screenSaver)
             if outcome == .unavailable {
-                cmuxDebugLog("sleepyMode.unlock unavailable — exiting without authentication")
+                Self.log.warning("Sleepy Mode unlock unavailable; exiting without authentication")
             }
             switch SleepyUnlockDecision(outcome) {
             case .exit:

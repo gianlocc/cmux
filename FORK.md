@@ -118,10 +118,18 @@ without a reboot:
 printf 'sleepy_mode off\n' | nc -U /tmp/cmux-debug-<tag>.sock
 ```
 
-Note this goes at the socket directly. `scripts/cmux-debug-cli.sh sleepy_mode off`
-does *not* work: `sleepy_mode` is handled by the app's socket dispatcher but was
-never added to the CLI, which rejects unknown commands client-side before they
-reach the socket.
+**Debug builds only.** Two caveats, both learned the hard way:
+
+- `sleepy_mode` sits inside `#if DEBUG` in `TerminalController`, so the command
+  does not exist in a Release build. There, the only external way out is Force
+  Quit.
+- It goes at the socket directly. `scripts/cmux-debug-cli.sh sleepy_mode off`
+  does *not* work: the command is handled by the app's socket dispatcher but was
+  never added to the CLI, which rejects unknown commands client-side before they
+  reach the socket.
+
+The three in-app guards below *do* work in Release; the socket was only the
+external backstop. Think twice before arming the gate on a Release build.
 
 `SleepyUnlockDecision` also fails *open* when macOS reports that no prompt can be
 shown at all (`.passcodeNotSet`, `.notInteractive`, `.invalidContext`) — a gate
@@ -167,6 +175,25 @@ are wired correctly but cannot be run locally on this toolchain. The
 
 Hoisting the macro argument into a local (`let e = f(); try #require(e)`) fixes
 each site, if it ever becomes worth chasing.
+
+### Release builds
+
+`Resources/cmux.entitlements` (the plain Release config) uses
+`$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)`, so it signs cleanly with any
+team -- no edits needed to build Release on a fork. The hardcoded `7WLXT3NR37`
+lives only in `cmux.release.entitlements` / `cmux.nightly.entitlements`, which are
+the upstream release lanes and are not reachable from a fork.
+
+Two things that only surface in Release, both of which cost time here:
+
+- `cmuxDebugLog` is `#if DEBUG`. Calling it from shipping code compiles fine
+  locally and fails only in a Release build. Use `os.Logger` instead -- see
+  `SleepyModeController.log`.
+- Release sets `ONLY_ACTIVE_ARCH = NO`, so it also compiles x86_64. A Debug build
+  never exercises that.
+
+A Debug-only green build proves less than it looks. Build Release before
+believing a change is done.
 
 ## Conflict-prone files on rebase
 
