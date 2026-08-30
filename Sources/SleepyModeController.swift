@@ -8,10 +8,15 @@ import SwiftUI
 /// leaving the Mac running for the cmux iOS app — and covers every screen with
 /// the animated scene.
 ///
-/// It is deliberately NOT a security boundary: a normal macOS app cannot make
-/// an unbypassable lock (the kiosk approach is escapable the moment another app
-/// takes focus). Any key or click wakes it. For real security, the scene's
-/// "Lock Mac" button triggers the actual macOS login lock.
+/// By default any key or click wakes it. Turning on "Require Touch ID to exit"
+/// routes every wake attempt through `requestExit()`, which demands device-owner
+/// authentication (Touch ID, with the account password as fallback) first.
+///
+/// Even then it is NOT a security boundary: a normal macOS app cannot make an
+/// unbypassable lock (force-quitting cmux, or connecting remotely, still reaches
+/// the desktop). The gate raises the bar against a passer-by, nothing more. For
+/// real security, the scene's "Lock Mac" button triggers the actual macOS login
+/// lock.
 @MainActor
 final class SleepyModeController {
     // App-lifecycle UI/window controller: it owns NSWindows and IOKit power
@@ -43,6 +48,14 @@ final class SleepyModeController {
     /// label and toggles from one authoritative value.
     let powerUIState = SleepyPowerUIState()
 
+    /// Device-owner authentication gate used when `store.requireAuth` is on,
+    /// owned here and injected into `requestExit()`; swap it for tests.
+    let unlockAuthenticator: any SleepyUnlockAuthenticating = SleepyUnlockAuthenticator()
+
+    /// Shared unlock UI state, so every per-display overlay shows one lock hint
+    /// and overlapping wake attempts coalesce into a single prompt.
+    let lockUIState = SleepyLockUIState()
+
     private(set) var isActive = false
 
     /// Invoked whenever sleepy mode turns on or off so menu UI can refresh.
@@ -65,14 +78,21 @@ final class SleepyModeController {
     /// UI must not claim the Mac is safely staying awake.
     var keepAwakeFullyActive: Bool { hasSystemAssertion && hasDisplayAssertion }
 
+    /// The one shared entry point every user-facing surface flips Sleepy Mode
+    /// through (menu bar item, command palette, debug socket `toggle`). Exiting
+    /// goes via `requestExit()` so the Touch ID gate applies identically no
+    /// matter which surface asked.
     func toggle() {
-        if isActive { deactivate() } else { activate() }
+        if isActive { requestExit() } else { activate() }
     }
 
-    /// Shows the screensaver and keeps the Mac awake. Any key/click wakes it.
+    /// Shows the screensaver and keeps the Mac awake. Any key/click wakes it,
+    /// unless "Require Touch ID to exit" is on — see `requestExit()`.
     func activate() {
         guard !isActive else { return }
         isActive = true
+        lockUIState.isPrompting = false
+        lockUIState.wasDenied = false
         beginPowerAssertions()
         installScreenObserver()
         rebuildOverlayWindows()
@@ -87,9 +107,49 @@ final class SleepyModeController {
         activate()
     }
 
+    /// The user-facing way out of Sleepy Mode: the overlay's key/click handlers
+    /// and the scene's Exit button all go through here.
+    ///
+    /// With "Require Touch ID to exit" off this is plain `deactivate()`. With it
+    /// on, the scene stays up until device-owner authentication succeeds.
+    ///
+    /// `deactivate()` itself stays ungated on purpose — it is the escape hatch
+    /// the debug socket's `sleepy_mode off` uses, so a prompt that cannot be
+    /// shown or dismissed can never strand the user behind a full-screen
+    /// overlay.
+    func requestExit() {
+        guard isActive else { return }
+        guard store.requireAuth else {
+            deactivate()
+            return
+        }
+        // One prompt at a time: there is one overlay per display, and a
+        // held-down key repeats its `keyDown`.
+        guard !lockUIState.isPrompting else { return }
+        lockUIState.isPrompting = true
+        lockUIState.wasDenied = false
+        let authenticator = unlockAuthenticator
+        let reason = String(localized: "sleepyMode.unlockReason", defaultValue: "Unlock cmux Sleepy Mode")
+        Task { [self] in
+            let outcome = await authenticator.authenticate(reason: reason)
+            lockUIState.isPrompting = false
+            if outcome == .unavailable {
+                cmuxDebugLog("sleepyMode.unlock unavailable — exiting without authentication")
+            }
+            switch SleepyUnlockDecision(outcome) {
+            case .exit:
+                deactivate()
+            case .stayLocked:
+                lockUIState.wasDenied = true
+            }
+        }
+    }
+
     func deactivate() {
         guard isActive else { return }
         isActive = false
+        lockUIState.isPrompting = false
+        lockUIState.wasDenied = false
         removeScreenObserver()
         endPowerAssertions()
         tearDownOverlayWindows()
@@ -126,8 +186,8 @@ final class SleepyModeController {
         window.isMovable = false
         window.acceptsMouseMovedEvents = true
         window.setFrame(screen.frame, display: true)
-        window.onExit = { [weak self] in self?.deactivate() }
-        window.contentView = NSHostingView(rootView: SleepyFaceView(store: store, power: powerControls, keepingAwake: keepAwakeFullyActive, agentCensus: agentCensus, statusProvider: statusProvider, powerUIState: powerUIState))
+        window.onExit = { [weak self] in self?.requestExit() }
+        window.contentView = NSHostingView(rootView: SleepyFaceView(store: store, power: powerControls, keepingAwake: keepAwakeFullyActive, agentCensus: agentCensus, statusProvider: statusProvider, powerUIState: powerUIState, lockUIState: lockUIState))
         return window
     }
 

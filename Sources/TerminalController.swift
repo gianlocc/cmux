@@ -13591,6 +13591,11 @@ class TerminalController {
     /// Drives Sleepy Mode from the debug socket so automation can exercise the
     /// overlay. `on`/`off` force a state, `toggle` flips it, and unknown commands
     /// return an error (so e.g. `unlock` can never accidentally activate it).
+    ///
+    /// `off`/`unlock` call `deactivate()` directly, bypassing the "Require Touch
+    /// ID to wake" gate: that is deliberate, and the escape hatch if the
+    /// authentication prompt cannot be shown. `toggle` goes through the gated
+    /// user-facing path and will prompt.
     func sleepyModeCommand(_ args: String) -> String {
         let trimmed = args.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = trimmed.split(separator: " ", maxSplits: 1).map(String.init)

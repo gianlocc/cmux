@@ -16,6 +16,8 @@ struct SleepyFaceView: View {
     var statusProvider: any SleepyStatusProviding
     /// Shared Low Power UI state (one instance across all per-display overlays).
     var powerUIState: SleepyPowerUIState
+    /// Shared unlock-gate state (one instance across all per-display overlays).
+    var lockUIState: SleepyLockUIState
 
     // Easter-egg reactions: timeIntervalSinceReferenceDate when poked.
     @State private var mascotReactAt: Double?
@@ -53,7 +55,13 @@ struct SleepyFaceView: View {
                 bottomBar(config: config)
             }
             .frame(width: geo.size.width, height: geo.size.height)
-            .overlay(alignment: .topLeading) { keepAwakeBadge(config: config).padding(26) }
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 10) {
+                    keepAwakeBadge(config: config)
+                    lockBadge(config: config)
+                }
+                .padding(26)
+            }
         }
         .ignoresSafeArea()
         .task { powerUIState.isOn = await power.isLowPowerOn() }
@@ -85,7 +93,7 @@ struct SleepyFaceView: View {
             return
         }
         // Missed everything: wake (casual) or prompt Touch ID / password (locked).
-        SleepyModeController.shared.toggle()
+        SleepyModeController.shared.requestExit()
     }
 
     private func mascotRect(size: CGSize, pixel: CGFloat) -> CGRect {
@@ -120,14 +128,48 @@ struct SleepyFaceView: View {
         .overlay(Rectangle().strokeBorder(tint.opacity(keepingAwake ? 0.22 : 0.5), lineWidth: 2))
     }
 
+    /// What the bottom hint promises. It must match what a keypress actually
+    /// does, so it tracks `requireAuth` and the last refused attempt.
+    private func dismissHint(config: SleepyModeConfig) -> String {
+        guard config.requireAuth else {
+            return String(localized: "sleepyMode.dismissHintCasual", defaultValue: "Press any key to wake (click the characters to play)")
+        }
+        if lockUIState.isPrompting {
+            return String(localized: "sleepyMode.dismissHintPrompting", defaultValue: "Waiting for Touch ID\u{2026}")
+        }
+        if lockUIState.wasDenied {
+            return String(localized: "sleepyMode.dismissHintDenied", defaultValue: "Not unlocked \u{2014} press any key to try Touch ID again")
+        }
+        return String(localized: "sleepyMode.dismissHint", defaultValue: "Touch ID or password to unlock")
+    }
+
+    /// Sits under the keep-awake badge whenever the unlock gate is armed, so it
+    /// is obvious at a glance that a keypress will prompt rather than wake.
+    @ViewBuilder
+    private func lockBadge(config: SleepyModeConfig) -> some View {
+        if config.requireAuth {
+            let tint = SleepyPalette.colors(for: config)["P"] ?? .white
+            HStack(spacing: 7) {
+                Image(systemName: lockUIState.isPrompting ? "touchid" : "lock.fill")
+                Text(String(localized: "sleepyMode.lockBadge", defaultValue: "Touch ID to wake"))
+            }
+            .font(.system(size: 13, weight: .bold, design: .monospaced))
+            .foregroundStyle(tint.opacity(0.7))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(tint.opacity(0.08))
+            .overlay(Rectangle().strokeBorder(tint.opacity(0.22), lineWidth: 2))
+        }
+    }
+
     private func bottomBar(config: SleepyModeConfig) -> some View {
         let accent = SleepyPalette.colors(for: config)["O"] ?? .white
-        let hintText = String(localized: "sleepyMode.dismissHintCasual", defaultValue: "Press any key to wake (click the characters to play)")
+        let hintText = dismissHint(config: config)
         return VStack(spacing: 0) {
             Spacer()
             HStack(spacing: 16) {
                 Button {
-                    SleepyModeController.shared.toggle()
+                    SleepyModeController.shared.requestExit()
                 } label: {
                     Label(String(localized: "sleepyMode.button.exit", defaultValue: "Exit"), systemImage: "xmark")
                 }

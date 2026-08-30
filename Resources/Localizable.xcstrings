@@ -434000,6 +434000,40 @@
         }
       }
     },
+    "sleepyMode.dismissHintDenied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not unlocked — press any key to try Touch ID again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック解除できませんでした — 任意のキーでもう一度 Touch ID を試します"
+          }
+        }
+      }
+    },
+    "sleepyMode.dismissHintPrompting": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for Touch ID…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch ID を待っています…"
+          }
+        }
+      }
+    },
     "sleepyMode.energy.automatic": {
       "extractionState": "manual",
       "localizations": {
@@ -434704,6 +434738,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mac을 깨어 있는 상태로 유지할 수 없습니다. 배터리 설정을 확인하세요."
+          }
+        }
+      }
+    },
+    "sleepyMode.lockBadge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch ID to wake"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解除に Touch ID"
           }
         }
       }
@@ -435498,13 +435549,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shows the scene full screen without locking; any key or click exits."
+            "value": "Shows the scene full screen; any key or click exits, or asks for Touch ID when the lock above is on."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ロックせず全画面で表示します。任意のキーまたはクリックで終了します。"
+            "value": "全画面でシーンを表示します。任意のキーまたはクリックで終了し、上のロックが有効な場合は Touch ID を要求します。"
           }
         },
         "zh-Hans": {
@@ -435675,13 +435726,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Locks the Mac. Blocks Cmd-Tab, Cmd-Q, and force-quit until you authenticate."
+            "value": "Any key or click asks for Touch ID, with your account password as the fallback. Cmd-Q and Cmd-W are swallowed too, but Force Quit still closes cmux."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mac をロックします。認証するまで Cmd-Tab、Cmd-Q、強制終了をブロックします。"
+            "value": "任意のキーまたはクリックで Touch ID（フォールバックはアカウントのパスワード）を要求します。Cmd-Q と Cmd-W も無効化しますが、強制終了では cmux を終了できます。"
           }
         },
         "zh-Hans": {
@@ -435852,13 +435903,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sleepy Mode is a screensaver, not a lock — any key wakes it. For real security, use the “Lock Mac” button in the scene, which engages the actual macOS login lock."
+            "value": "Even with Touch ID required, Sleepy Mode is a deterrent rather than a real lock: cmux is an ordinary app, so force-quitting it or connecting remotely still reaches your desktop. For genuine security use the “Lock Mac” button in the scene, which engages the actual macOS login lock."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "おやすみモードはロックではなくスクリーンセーバーです（任意のキーで解除）。本当のセキュリティが必要な場合は、画面内の「Mac をロック」ボタンを使うと、実際の macOS ログインロックがかかります。"
+            "value": "Touch ID を要求しても、おやすみモードは本当のロックではなく抑止にすぎません。cmux は通常のアプリなので、強制終了やリモート接続でデスクトップに到達できます。本当のセキュリティが必要な場合は、画面内の「Mac をロック」ボタンを使うと、実際の macOS ログインロックがかかります。"
           }
         },
         "zh-Hans": {

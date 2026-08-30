@@ -109,8 +109,18 @@ public struct SleepyModeSection: View {
             SettingsCard {
                 SettingsCardRow(
                     configurationReview: .settingsOnly,
+                    String(localized: "sleepyMode.settings.requireAuth", defaultValue: "Require Touch ID to exit"),
+                    subtitle: store.requireAuth
+                        ? String(localized: "sleepyMode.settings.requireAuth.on", defaultValue: "Any key or click asks for Touch ID, with your account password as the fallback. Cmd-Q and Cmd-W are swallowed too, but Force Quit still closes cmux.")
+                        : String(localized: "sleepyMode.settings.requireAuth.off", defaultValue: "Casual screensaver. Any key or click wakes it.")
+                ) {
+                    Toggle("", isOn: $store.requireAuth).labelsHidden().controlSize(.small)
+                }
+                SettingsCardDivider()
+                SettingsCardRow(
+                    configurationReview: .settingsOnly,
                     String(localized: "sleepyMode.settings.securityNote", defaultValue: "About security"),
-                    subtitle: String(localized: "sleepyMode.settings.securityNote.subtitle", defaultValue: "Sleepy Mode is a screensaver, not a lock — any key or click wakes it. For real security, use the \u{201C}Lock Mac\u{201D} button in the scene, which engages the actual macOS login lock.")
+                    subtitle: String(localized: "sleepyMode.settings.securityNote.subtitle", defaultValue: "Even with Touch ID required, Sleepy Mode is a deterrent rather than a real lock: cmux is an ordinary app, so force-quitting it or connecting remotely still reaches your desktop. For genuine security use the \u{201C}Lock Mac\u{201D} button in the scene, which engages the actual macOS login lock.")
                 ) {
                     EmptyView()
                 }
@@ -119,7 +129,7 @@ public struct SleepyModeSection: View {
             SettingsCard {
                 SettingsCardRow(
                     String(localized: "sleepyMode.settings.previewRow", defaultValue: "Preview"),
-                    subtitle: String(localized: "sleepyMode.settings.previewRow.subtitle", defaultValue: "Shows the scene full screen without locking; any key or click exits.")
+                    subtitle: String(localized: "sleepyMode.settings.previewRow.subtitle", defaultValue: "Shows the scene full screen; any key or click exits, or asks for Touch ID when the lock above is on.")
                 ) {
                     Button(String(localized: "sleepyMode.settings.preview", defaultValue: "Preview full screen")) {
                         hostActions.sleepyModePreview()

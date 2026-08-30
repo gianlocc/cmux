@@ -21,6 +21,8 @@ public struct SleepyModeConfig: Equatable, Sendable {
     public var showStatus = true
     /// Whether one walking pet per running agent is drawn.
     public var showPets = true
+    /// Whether leaving Sleepy Mode requires Touch ID or the account password.
+    public var requireAuth = false
 
     // Default custom colors below are matched to the cmux theme so "Custom"
     // starts familiar; "RRGGBB" hex.

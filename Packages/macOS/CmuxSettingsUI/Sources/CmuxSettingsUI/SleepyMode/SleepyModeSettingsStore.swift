@@ -35,6 +35,8 @@ public final class SleepyModeSettingsStore {
     public var showStatus: Bool { didSet { persist(showStatus, SleepyModeDefaultsKeys.showStatus) } }
     /// Whether one walking pet per running agent is drawn.
     public var showPets: Bool { didSet { persist(showPets, SleepyModeDefaultsKeys.showPets) } }
+    /// Whether leaving Sleepy Mode requires Touch ID or the account password.
+    public var requireAuth: Bool { didSet { persist(requireAuth, SleepyModeDefaultsKeys.requireAuth) } }
 
     /// Custom face color ("RRGGBB"), used when `theme == .custom`.
     public var customFace: String { didSet { persist(customFace, SleepyModeDefaultsKeys.customFace) } }
@@ -65,6 +67,7 @@ public final class SleepyModeSettingsStore {
         showClock = defaults.object(forKey: SleepyModeDefaultsKeys.showClock) as? Bool ?? fallback.showClock
         showStatus = defaults.object(forKey: SleepyModeDefaultsKeys.showStatus) as? Bool ?? fallback.showStatus
         showPets = defaults.object(forKey: SleepyModeDefaultsKeys.showPets) as? Bool ?? fallback.showPets
+        requireAuth = defaults.object(forKey: SleepyModeDefaultsKeys.requireAuth) as? Bool ?? fallback.requireAuth
         customFace = defaults.string(forKey: SleepyModeDefaultsKeys.customFace) ?? fallback.customFace
         customCap = defaults.string(forKey: SleepyModeDefaultsKeys.customCap) ?? fallback.customCap
         customBlush = defaults.string(forKey: SleepyModeDefaultsKeys.customBlush) ?? fallback.customBlush
@@ -85,6 +88,7 @@ public final class SleepyModeSettingsStore {
         config.showClock = showClock
         config.showStatus = showStatus
         config.showPets = showPets
+        config.requireAuth = requireAuth
         config.customFace = customFace
         config.customCap = customCap
         config.customBlush = customBlush
