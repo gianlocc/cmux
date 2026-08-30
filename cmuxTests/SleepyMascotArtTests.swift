@@ -14,8 +14,11 @@ import Testing
 /// floating in empty space, which no unit-free visual check would catch.
 @Suite("Sleepy Mode mascot art")
 struct SleepyMascotArtTests {
-    @Test("Every grid mascot is a 16x16 sprite", arguments: SleepyMascot.allCases)
-    func spritesAreSquare(mascot: SleepyMascot) {
+    /// Every sprite is 16 rows tall so the mascots share a footprint, and every
+    /// row within a sprite is the same width so the grid is not ragged. Width
+    /// itself is per-mascot on purpose — see `exaSpriteKeepsTheMarksAspectRatio`.
+    @Test("Sprites are 16 rows tall with a consistent width", arguments: SleepyMascot.allCases)
+    func spriteGridIsWellFormed(mascot: SleepyMascot) {
         let rows = SleepyArt.mascotRows(mascot)
         // logoFace draws procedurally from the chevron, not from a grid.
         guard mascot != .logoFace else {
@@ -23,9 +26,29 @@ struct SleepyMascotArtTests {
             return
         }
         #expect(rows.count == 16, "\(mascot.rawValue) has \(rows.count) rows")
-        for (index, row) in rows.enumerated() {
-            #expect(row.count == 16, "\(mascot.rawValue) row \(index) is \(row.count) wide")
+        let widths = Set(rows.map(\.count))
+        #expect(widths.count == 1, "\(mascot.rawValue) has ragged rows: \(widths.sorted())")
+        // The shared face anchors reach column 11, so anything wearing the face
+        // must be the full 16 wide or the eyes hang off the sprite.
+        if mascot.wearsSharedFace {
+            #expect(rows.first?.count == 16, "\(mascot.rawValue) wears the face but is not 16 wide")
         }
+    }
+
+    /// The mark is 328x404. Squeezing it into the square grid the other mascots
+    /// use stretches it about 23% horizontally, which is obvious on screen — it
+    /// shipped that way once already.
+    @Test("The Exa sprite keeps the mark's aspect ratio")
+    func exaSpriteKeepsTheMarksAspectRatio() {
+        let rows = SleepyArt.mascotRows(.exa)
+        let width = rows.first?.count ?? 0
+        #expect(width == 13, "Exa sprite is \(width) wide; 13x16 is what matches the 328x404 mark")
+        let spriteAspect = Double(width) / Double(rows.count)
+        let markAspect = 328.0 / 404.0
+        #expect(
+            abs(spriteAspect - markAspect) < 0.02,
+            "Exa sprite aspect \(spriteAspect) drifted from the mark's \(markAspect)"
+        )
     }
 
     /// Only mascots that wear the shared face need head under the anchors. A
@@ -61,18 +84,19 @@ struct SleepyMascotArtTests {
     @Test("The Exa mark keeps its spine, bars and hourglass pinch")
     func exaMarkGeometry() {
         let rows = SleepyArt.mascotRows(.exa)
-        for row in 0..<16 {
+        let width = rows.first?.count ?? 0
+        for row in rows.indices {
             #expect(Self.pixel(rows, col: 0, row: row) == "E", "Exa spine broken at row \(row)")
         }
-        for col in 0..<16 {
+        for col in 0..<width {
             #expect(Self.pixel(rows, col: col, row: 0) == "E", "Exa top bar broken at column \(col)")
             #expect(Self.pixel(rows, col: col, row: 15) == "E", "Exa bottom bar broken at column \(col)")
         }
         // The waist: the mid bar runs left, and the right half is open there.
-        #expect(Self.pixel(rows, col: 9, row: 7) == "E")
-        #expect(Self.pixel(rows, col: 12, row: 7) == ".")
+        #expect(Self.pixel(rows, col: 7, row: 7) == "E")
+        #expect(Self.pixel(rows, col: 10, row: 7) == ".")
         // Counter-space inside the upper triangle stays open.
-        #expect(Self.pixel(rows, col: 8, row: 2) == ".")
+        #expect(Self.pixel(rows, col: 6, row: 2) == ".")
     }
 
     /// Every mascot is drawn from the theme palette; a stray character would

@@ -60,30 +60,35 @@ enum SleepyArt {
         "................",
     ]
 
-    /// The Exa "E/X" monogram (16x16), rasterized from the official asset
+    /// The Exa "E/X" monogram (13x16), rasterized from the official asset
     /// rather than eyeballed. Flat `E` strokes: the mark has no bevel, and `E`
     /// is Exa brand blue, which every theme leaves alone.
+    ///
+    /// 13 wide, not 16: the real mark is 328x404, and forcing a non-square mark
+    /// into the square grid the other mascots use stretches it ~23% horizontally.
+    /// `drawSprite` uses square pixels and centers on `rows`/`cols`, so an
+    /// off-square sprite renders at the correct proportions on its own.
     ///
     /// Line art, not a head. It opts out of the shared face anchors via
     /// `SleepyMascot.wearsSharedFace`, because eyes and a mouth land on the
     /// strokes and read as noise.
     static let exaMascot: [String] = [
-        "EEEEEEEEEEEEEEEE",
-        "EEEEEEEEEEEEEEEE",
-        "EEEE........EEE.",
-        "EEEEE......EEE..",
-        "EE..EE....EEE...",
-        "EE...EE..EEE....",
-        "EE....EEEEE.....",
-        "EEEEEEEEEE......",
-        "EEEEEEEEEE......",
-        "EE....EEEEE.....",
-        "EE...EE..EEE....",
-        "EE..EE....EEE...",
-        "EEEEE......EEE..",
-        "EEEE........EEE.",
-        "EEEEEEEEEEEEEEEE",
-        "EEEEEEEEEEEEEEEE",
+        "EEEEEEEEEEEEE",
+        "EEEEEEEEEEEEE",
+        "EEE.......EE.",
+        "EEEE.....EE..",
+        "EE.EE...EE...",
+        "EE..EE..EE...",
+        "EE...EEEE....",
+        "EEEEEEEE.....",
+        "EEEEEEEE.....",
+        "EE...EEEE....",
+        "EE..EE..EE...",
+        "EE.EE...EE...",
+        "EEEE.....EE..",
+        "EEE.......EE.",
+        "EEEEEEEEEEEEE",
+        "EEEEEEEEEEEEE",
     ]
 
     /// Ghost: domed top, wavy feet (16x16).
