@@ -434708,6 +434708,23 @@
         }
       }
     },
+    "sleepyMode.mascot.bunny": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bunny"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "うさぎ"
+          }
+        }
+      }
+    },
     "sleepyMode.mascot.cat": {
       "extractionState": "manual",
       "localizations": {

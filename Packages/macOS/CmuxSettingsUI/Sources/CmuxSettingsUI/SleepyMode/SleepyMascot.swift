@@ -8,6 +8,8 @@ public enum SleepyMascot: String, CaseIterable, Identifiable, Sendable {
     case cat
     /// A friendly ghost.
     case ghost
+    /// A sleepy bunny with tall, blush-lined ears.
+    case bunny
     /// A face built from the cmux `>` chevron logo.
     case logoFace
 

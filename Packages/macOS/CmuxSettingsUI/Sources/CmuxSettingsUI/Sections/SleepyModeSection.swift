@@ -43,6 +43,7 @@ public struct SleepyModeSection: View {
                         Text(String(localized: "sleepyMode.mascot.cmux", defaultValue: "cmux mascot")).tag(SleepyMascot.cmux)
                         Text(String(localized: "sleepyMode.mascot.cat", defaultValue: "Cat")).tag(SleepyMascot.cat)
                         Text(String(localized: "sleepyMode.mascot.ghost", defaultValue: "Ghost")).tag(SleepyMascot.ghost)
+                        Text(String(localized: "sleepyMode.mascot.bunny", defaultValue: "Bunny")).tag(SleepyMascot.bunny)
                         Text(String(localized: "sleepyMode.mascot.logoFace", defaultValue: "Logo face")).tag(SleepyMascot.logoFace)
                     }
                     .labelsHidden().pickerStyle(.menu).controlSize(.small)
