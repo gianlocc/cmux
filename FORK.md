@@ -195,6 +195,70 @@ Two things that only surface in Release, both of which cost time here:
 A Debug-only green build proves less than it looks. Build Release before
 believing a change is done.
 
+#### Building Release on a fork machine
+
+Upstream's Release lane assumes upstream's CI: a signing team in the project
+file, Go on PATH, and an Xcode whose SDK matches whatever the caches were last
+built against. On a fork none of that holds, so a Release build wants four
+things. The first three are command-line only; the fourth is the one file this
+fork patches.
+
+```bash
+CMUX_DIFF_SIDECAR_TOOLCHAIN=stable CMUX_WIREGUARD_GO_REQUIRE=0 \
+  xcodebuild -project cmux.xcodeproj -scheme cmux -configuration Release \
+  -destination 'platform=macOS' -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM=<your team id> CMUX_WIREGUARD_GO_REQUIRE=0 build
+```
+
+- **`DEVELOPMENT_TEAM`** — the project ships `DEVELOPMENT_TEAM = ""`, and the
+  entitlements demand a development certificate, so the build fails with
+  "has entitlements that require signing with a development certificate" until
+  a team is supplied. Pass it on the command line rather than editing the
+  pbxproj: an edit there is a permanent rebase conflict and leaks the team id.
+- **`CMUX_WIREGUARD_GO_REQUIRE=0`** — Release otherwise requires a Go toolchain
+  to build the cmux Cloud tunnel extension. The stub is fine on a fork, which
+  cannot sign a loadable system extension anyway; `brew install go` if the
+  tunnel is ever wanted. Pass it *both* as an environment variable and as a
+  build setting: the run-script phase reads the build setting, not the
+  ambient environment.
+- **`CMUX_DIFF_SIDECAR_TOOLCHAIN=stable`** — see below.
+- **A stale `cmux-cua` cargo cache** survives Xcode upgrades and keeps linking
+  against the SDK it first saw (`ld: library 'dispatch' not found`, with search
+  paths under a `MacOSX<old>.sdk` that no longer exists). Cargo does not track
+  the SDK, so the build scripts are never rerun. Clean just the two offending
+  packages, not the whole cache:
+
+  ```bash
+  SRC=~/Library/Caches/cmux/cmux-cua/src-<pinned sha>
+  cargo clean --manifest-path $SRC/libs/cmux-cua/rust/Cargo.toml \
+    --target-dir $SRC/.cmux-cargo-target --release \
+    --target aarch64-apple-darwin -p cmux-cua -p platform-macos
+  ```
+
+#### Why `run-diff-sidecar-cargo.sh` takes a toolchain override
+
+`Native/DiffSidecar/rust-toolchain.toml` pins Rust 1.88.0, and
+`scripts/run-diff-sidecar-cargo.sh` hardcodes `rustup run <that pin> cargo`, with
+no way in or around it. On macOS 27, 1.88.0 built with
+`MACOSX_DEPLOYMENT_TARGET=14.0` — which `scripts/build-diff-sidecar.sh` always
+sets — emits proc-macro dylibs that dyld refuses to load:
+
+```
+libserde_derive-<hash>.dylib (mis-aligned LINKEDIT string pool, fileOffset=…)
+error[E0463]: can't find crate for `thiserror_impl`
+```
+
+The errors name `serde`, `thiserror` and `tokio`, which makes it look like a
+dependency problem; it is not. It is rustc writing a Mach-O that the newer dyld
+rejects, and the same 1.88.0 builds cleanly with no deployment target set. Rust
+1.98 is fine either way. Upstream CI pins its own macOS and never sees this.
+
+So this fork adds four lines letting `CMUX_DIFF_SIDECAR_TOOLCHAIN` override the
+pin. Upstream's default is untouched, which keeps the diff to a single hunk that
+upstream is unlikely to conflict with. Drop the patch once upstream moves the pin
+past 1.88; keep it while the pin stands, since the failure is opaque and costs an
+afternoon to rediscover.
+
 ## Conflict-prone files on rebase
 
 Kept deliberately small; these are the ones upstream is most likely to touch too.
